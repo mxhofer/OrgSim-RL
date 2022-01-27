@@ -1,0 +1,1 @@
+Directory for Google Cloud private key.
