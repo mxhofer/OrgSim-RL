@@ -1,7 +1,8 @@
 # Custom
 .DS_Store
 .idea
-vm/vm.py
+.streamlit
+!.streamlit/readme.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
                 # Make sure the GitHub access token in the 'giturl' parameter is up-to-date
                 vm_start_instance(vmname='vm-{}-tau-{}-delta-{}-lambda-{}'.format(START_TIME, str(tau).replace('.', ''), delta, lambda_),
-                                  rpc_cd='cd automation/dyna-q/',
+                                  rpc_cd='cd OrgSim-RL/dyna-q/',
                                   rpc_run=rpc_run,
                                   giturl=GIT_URL)
 

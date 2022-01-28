@@ -7,8 +7,8 @@ simulation:
 
 # Learning parameters for the Dyna agent
 dyna:
-  episodes: 100 # default: 1000
-  runs: 50    # default: 5000 (runtime at 5000 ~ 14 hours)
+  episodes: 1000 # default: 1000
+  runs: 5000     # default: 5000 (runtime at 5000 ~ 14 hours)
   gamma: 0.9     # discount (default: 0.9)
   planning: 4    # number of planning steps for indirect learning (default: 4)
   epsilon: 0.1   # exploration rate (default: 0.1)
