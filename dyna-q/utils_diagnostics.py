@@ -43,8 +43,8 @@ class Diagnostics:
                                   'n_samplesModelDomain4': [],
                                   'n_visits_per_state': np.zeros((13, 13)),
                                   'neutral_states_share': [],
-                                  'exploration_states_share': [],
-                                  'exploitation_states_share': [],
+                                  'shortpath_states_share': [],
+                                  'longpath_states_share': [],
                                   'neutral_states_count': [],
                                   'exploration_states_count': [],
                                   'exploitation_states_count': []

@@ -73,11 +73,13 @@ The `config.yaml` file contains all parameter values. The `vm/vm.py` file starts
 ## Ingest results into BigQuery
 
 1. Follow the general guide on ingesting .csv files into BigQuery [here](https://cloud.google.com/bigquery/docs/loading-data-cloud-storage-csv#console)
-   1. Data set ID: date + TAG 
-   2. Table name: `results` (hard requirement as the SQL queries expect this table name!)
-   3. Schema: Auto detect
-   4. Cluster by `delta, lambda` to speed up querying performance
-   5. Header rows to skip: 1
+   1. Data set ID: date + TAG
+   2. Create table from: select a .csv output file in the appropriate bucket. Then edit the filename to `*.csv` to ingest all files in that bucket.
+   3. Table name: `results` (hard requirement as the SQL queries expect this table name!)
+   4. Schema: Auto detect.
+   5. Cluster by `delta, lambda` to speed up querying performance.
+   6. In Advanced Options. Header rows to skip: 1
+   7. Create table.
 2. Validate number of rows in table
    1. Click on the table name
    2. Navigate to `Details`
@@ -91,12 +93,14 @@ The `config.yaml` file contains all parameter values. The `vm/vm.py` file starts
    2. Create a key. 
    3. Download the key as a JSON. 
 2. Save the key file in `.streamlit/`
-3. Add the key file to `.gitignore`
+3. Update the path to the key file in `dashboard.py`
+4. Add the key file to `.gitignore`
 
 ## Deploy dashboard
 
 1. Test that the dashboard is running locally:
    1. `streamlit run dashboard.py --server.port=8080 --server.address=0.0.0.0`
+   2. Running the dashboard will write .csv files of the outputs to disk in `dyna-q/outputs`
 2. Test that the dashboard is running locally in a Docker container:
    1. `docker build . -t dashboard`
    2. `docker run -p 8080:8080 dashboard`

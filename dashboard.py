@@ -14,7 +14,7 @@ from google.cloud import bigquery
 
 # Create API client.
 credentials = service_account.Credentials.from_service_account_file(
-    filename='.streamlit/<filename>.json'
+    filename='.streamlit/<filename>'
 )
 client = bigquery.Client(credentials=credentials, project=credentials.project_id)
 
@@ -26,11 +26,12 @@ def run_query(query):
     query_job = client.query(query)
     rows_raw = query_job.result()
     # Convert to list of dicts. Required for st.cache to hash the return value.
-    rows = [dict(row) for row in rows_raw]
-    return rows
+    rows_query = [dict(r) for r in rows_raw]
+    return rows_query
 
 
-def format_parameters(query_result, lambdas=[], taus=[]):
+# ----------------------------------------------------------------------------------------------------------------------
+def format_parameters(query_result, lambdas=None, taus=None):
     """
     Format parameters from BigQuery result
     :param query_result: result from BQ
@@ -39,9 +40,16 @@ def format_parameters(query_result, lambdas=[], taus=[]):
     :return: parameter string
     """
 
+    # It's the pythonic way
+    if taus is None:
+        taus = []
+    if lambdas is None:
+        lambdas = []
+
     pars_to_show = ['start_date', 'start_time', 'lambda', 'alpha', 'alpha_prime', 'nu', 'epsilon', 'n_planning',
                     'delta', 'eta', 'door_switching', 'init_door', 'tau', 'gamma', 'runs', 'org_steps']
-    taus = [round(t, 2) for t in taus]
+
+    taus = [round(t_formatting, 2) for t_formatting in taus]
     pars_dict = {'Parameter value': []}
     for k, v in query_result[0].items():
         if k in pars_to_show:
@@ -74,6 +82,7 @@ def format_validation(query_result):
 
     return observed_n_steps
 
+
 def mc_perm_test(xs, ys, m):
     """
     Exact Monte Carlo permutation test (two-sided) (Ernst, 2004)
@@ -89,10 +98,11 @@ def mc_perm_test(xs, ys, m):
         np.random.shuffle(combined)  # shuffle in place
         d_permute = np.abs(np.mean(combined[:n]) - np.mean(combined[n:]))
         bs += int(d_permute >= d_original)
-    p_val = (bs + 1) / (m + 1)
-    return round(p_val, 15)
+    p_value = (bs + 1) / (m + 1)
+    return round(p_value, 15)
 
-# -------------
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 st.title('Simulation Results – BigQuery')
 
@@ -454,16 +464,15 @@ if EXHIBIT == 'Dynamic Diagnostics' or RUN_ALL_TABS:
     rows = run_query(f'select path_taken, orgstep_id, COUNT(*) from {TABLE_NAME} where delta={delta} and lambda={lambda_} and tau={tau} group by path_taken, orgstep_id')
     df = pd.DataFrame(rows)
     df = pd.get_dummies(df, columns=['path_taken'], drop_first=False)
-    # Todo: Path names will change in next run
-    df['path_taken_attempted closed door'] = df['path_taken_attempted closed door'] * df['f0_']
-    df['path_taken_exploitation (optimal path!)'] = df['path_taken_exploitation (optimal path!)'] * df['f0_']
-    df['path_taken_exploration (optimal path!)'] = df['path_taken_exploration (optimal path!)'] * df['f0_']
+    df['path_taken_short path (closed door)'] = df['path_taken_short path (closed door)'] * df['f0_']
+    df['path_taken_long path'] = df['path_taken_long path'] * df['f0_']
+    df['path_taken_short path (open door)'] = df['path_taken_short path (open door)'] * df['f0_']
     df.drop(labels=['f0_'], axis=1, inplace=True)
     df = df.groupby(by='orgstep_id').sum()/RUNS
 
-    plt.bar(range(STEPS), df['path_taken_attempted closed door'], label='Closed door')
-    plt.bar(range(STEPS), df['path_taken_exploitation (optimal path!)'], bottom=df['path_taken_attempted closed door'], label='Exploitation path')
-    plt.bar(range(STEPS), df['path_taken_exploration (optimal path!)'], bottom=df['path_taken_attempted closed door'] + df['path_taken_exploitation (optimal path!)'], label='Exploration path')
+    plt.bar(range(STEPS), df['path_taken_short path (closed door)'], label='Closed door')
+    plt.bar(range(STEPS), df['path_taken_long path'], bottom=df['path_taken_short path (closed door)'], label='Exploitation path')
+    plt.bar(range(STEPS), df['path_taken_short path (open door)'], bottom=df['path_taken_short path (closed door)'] + df['path_taken_long path'], label='Exploration path')
     plt.xlabel('Episode')
     plt.ylabel('Share')
     plt.legend()
@@ -475,9 +484,9 @@ if EXHIBIT == 'Dynamic Diagnostics' or RUN_ALL_TABS:
         rows = run_query(f'select path_taken, orgstep_id, COUNT(*) from {TABLE_NAME} where delta={delta} and lambda={lambda_} and tau={t} group by path_taken, orgstep_id')
         df = pd.DataFrame(rows)
         df = pd.get_dummies(df, columns=['path_taken'], drop_first=False)
-        df['path_taken_attempted closed door'] = df['path_taken_attempted closed door'] * df['f0_']
-        df['path_taken_exploitation (optimal path!)'] = df['path_taken_exploitation (optimal path!)'] * df['f0_']
-        df['path_taken_exploration (optimal path!)'] = df['path_taken_exploration (optimal path!)'] * df['f0_']
+        df['path_taken_short path (closed door)'] = df['path_taken_short path (closed door)'] * df['f0_']
+        df['path_taken_long path'] = df['path_taken_long path'] * df['f0_']
+        df['path_taken_short path (open door)'] = df['path_taken_short path (open door)'] * df['f0_']
         df.drop(labels=['f0_'], axis=1, inplace=True)
         df = df.groupby(by='orgstep_id').sum() / RUNS
         df.to_csv(f'dyna-q/outputs/results/{SIMULATION_ID}/dynamic_paths_count_delta-{delta}_lambda-{lambda_}_tau-{t}.csv')
@@ -495,7 +504,7 @@ if EXHIBIT == 'Dynamic Diagnostics' or RUN_ALL_TABS:
     data = []
     labels = []
     for leader in set(df['leader'].values):
-        d = np.zeros((STEPS))
+        d = np.zeros(STEPS)
         for s in range(STEPS):
             leader_count = df[(df['leader'] == leader) & (df['orgstep_id'] == s)]['f0_']
             if len(leader_count) == 1:
@@ -512,4 +521,3 @@ if EXHIBIT == 'Dynamic Diagnostics' or RUN_ALL_TABS:
     plt.legend()
     st.pyplot(plt)
     plt.clf()
-

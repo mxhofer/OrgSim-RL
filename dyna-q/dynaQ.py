@@ -325,8 +325,8 @@ class MasterData:
                                    'opportunity_costs': None,
                                    'leader': None,
                                    'action_from_start': None,
-                                   'exploration_states_share': None,
-                                   'exploitation_states_share': None,
+                                   'shortpath_states_share': None,
+                                   'longpath_states_share': None,
                                    'neutral_states_share': None,
                                    'path_taken': None,
                                    }
@@ -928,8 +928,8 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
         diagnostics_instance_o['n_samplesModelDomain4'].append(len(model.model[4]))
         diagnostics_instance_o['n_visits_per_state'] += n_visits_per_state
         diagnostics_instance_o['neutral_states_share'].append((episode_moves - exploration_states_counter - exploitation_states_counter) / episode_moves)
-        diagnostics_instance_o['exploration_states_share'].append(exploration_states_counter / episode_moves)
-        diagnostics_instance_o['exploitation_states_share'].append(exploitation_states_counter / episode_moves)
+        diagnostics_instance_o['shortpath_states_share'].append(exploration_states_counter / episode_moves)
+        diagnostics_instance_o['longpath_states_share'].append(exploitation_states_counter / episode_moves)
         diagnostics_instance_o['neutral_states_count'].append(episode_moves - exploration_states_counter - exploitation_states_counter)
         diagnostics_instance_o['exploration_states_count'].append(exploration_states_counter)
         diagnostics_instance_o['exploitation_states_count'].append(exploitation_states_counter)
@@ -960,8 +960,8 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
         empty_row['opportunity_costs'] = opportunityCosts
         empty_row['leader'] = org.leader_name
         empty_row['action_from_start'] = a_start
-        empty_row['exploration_states_share'] = exploration_states_counter / episode_moves
-        empty_row['exploitation_states_share'] = exploitation_states_counter / episode_moves
+        empty_row['shortpath_states_share'] = exploration_states_counter / episode_moves
+        empty_row['longpath_states_share'] = exploitation_states_counter / episode_moves
         empty_row['neutral_states_share'] = (episode_moves - exploration_states_counter - exploitation_states_counter) / episode_moves
         empty_row['path_taken'] = path_taken
 
