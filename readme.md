@@ -1,4 +1,4 @@
-# AutoOrgRL Project
+# OrgSim-RLRL Project
 
 Copyright (c) 2022 Maximilian W. Hofer & Kenneth A. Younge.
 
@@ -8,7 +8,7 @@ Repo maintainer: Maximilian W. Hofer ([maximilian.hofer@epfl.ch](mailto:maximili
 	SOURCE:  https://github.com/mxhofer/OrgSim-RL  
 	LICENSE: Access to this code is provided under an MIT License.  
 
-The AutoOrgRL project investigates how automation can impact organizations using a reinforcement learning simulation.
+The OrgSim-RLRL project investigates how automation can impact organizations using a reinforcement learning simulation.
 
 # Key directories and files
 
@@ -21,7 +21,7 @@ The AutoOrgRL project investigates how automation can impact organizations using
 # Usage
 ## Fork repo
 
-Create your own copy of the repository to freely experiment with AutoOrgRL.
+Create your own copy of the repository to freely experiment with OrgSim-RLRL.
 
 ## Install dependencies
 
