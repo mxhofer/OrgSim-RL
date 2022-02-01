@@ -80,28 +80,28 @@ def model_contains_domainExperience(model, domain):
     return bool(samples_in_domain >= 1)
 
 
-def switch_points_intervals(steps, splits):
+def switch_points_intervals(episodes, splits):
     """
     Find splitting points in a range for a given number of splits
-    :param steps: the range
+    :param episodes: the range
     :param splits: the number of desired splits
     :return: list of split indices
     """
-    indices = np.linspace(0, steps, splits+2)
+    indices = np.linspace(0, episodes, splits+2)
     indices = indices[1:len(indices)-1]   # trim start and end points
     indices = np.rint(indices)            # round to nearest integers
     assert len(indices) == splits, f'ERROR: More splits made ({len(indices)}) than expected: {splits}.'
     return indices
 
 
-def switch_points_random(steps, splits):
+def switch_points_random(episodes, splits):
     """
     Find random splitting points in a range for a given number of splits
-    :param steps: the range
+    :param episodes: the range
     :param splits: the number of desired splits
     :return: list of split indices
     """
-    indices = np.random.choice(a=range(steps), size=splits, replace=False)
+    indices = np.random.choice(a=range(episodes), size=splits, replace=False)
     assert len(indices) == splits, f'ERROR: More splits made ({len(indices)}) than expected: {splits}.'
     return indices
 
@@ -272,13 +272,13 @@ def optimal_action(s, action_taken, maze_params_helper):
     return int(str(action_taken) in optimal_a)
 
 
-def set_params(dyna_params_helper, maze_params_helper, steps, par_name, par_value, parX_name='', parX_value='',
+def set_params(dyna_params_helper, maze_params_helper, episodes, par_name, par_value, parX_name='', parX_value='',
                parXX_name='', parXX_value=''):
     """
     Set primary parameter value you want to iterate over
     :param dyna_params_helper: an instance of dyna
     :param maze_params_helper: an instance of maze
-    :param steps: number of organizational steps
+    :param episodes: number of episodes
     :param par_name: the first parameter name
     :param par_value: the first parameter value
     :param parX_name: the second parameter name (optional)
@@ -334,7 +334,7 @@ def set_params(dyna_params_helper, maze_params_helper, steps, par_name, par_valu
     # Specialization learning rate
     dyna_params_helper.ALPHA_PRIME = deepcopy(dyna_params_helper.ALPHA + dyna_params_helper.NU * np.log(dyna_params_helper.LAMBDA_))
     dyna_params_helper.ALPHA_PRIME = round(dyna_params_helper.ALPHA_PRIME, 2)
-    dyna_params_helper.TAU_AUTOMATED_EPISODES = np.random.choice(range(steps), int(dyna_params_helper.TAU * steps), replace=False)
+    dyna_params_helper.TAU_AUTOMATED_EPISODES = np.random.choice(range(episodes), int(dyna_params_helper.TAU * episodes), replace=False)
 
     # Re-initialize doors at the beginning of each run
     if maze_params_helper.INIT_DOOR == 'half':
@@ -347,7 +347,7 @@ def set_params(dyna_params_helper, maze_params_helper, steps, par_name, par_valu
 
     assert 0 <= dyna_params_helper.ALPHA_PRIME <= 1, f'ERROR: Check alpha prime parameter: {dyna_params_helper.ALPHA_PRIME}'
     assert dyna_params_helper.ALPHA_PRIME >= dyna_params_helper.ALPHA, f'ERROR: Check alpha prime {dyna_params_helper.ALPHA_PRIME} and alpha {dyna_params_helper.ALPHA}'
-    assert int(dyna_params_helper.TAU * steps) - 1 <= len(dyna_params_helper.TAU_AUTOMATED_EPISODES) <= int(dyna_params_helper.TAU * steps) + 1, f'ERROR: Check length of automated org steps: {len(dyna_params_helper.TAU_AUTOMATED_EPISODES)}'
+    assert int(dyna_params_helper.TAU * episodes) - 1 <= len(dyna_params_helper.TAU_AUTOMATED_EPISODES) <= int(dyna_params_helper.TAU * episodes) + 1, f'ERROR: Check length of automated episodes: {len(dyna_params_helper.TAU_AUTOMATED_EPISODES)}'
     assert maze_params_helper.CLOSED_DOOR_STATES.count('open') == 2, 'ERROR: There must always be two doors open.'
 
     return deepcopy(dyna_params_helper), deepcopy(maze_params_helper)

@@ -1014,7 +1014,7 @@ def run_simulation(maze_params, dyna_params, par_name, par_value, parX_name, par
     for run in range(dyna_params.RUNS):
 
         # Set Dyna & maze parameters
-        dyna_params, maze_params = set_params(dyna_params, maze_params, steps=EPISODES,
+        dyna_params, maze_params = set_params(dyna_params, maze_params, episodes=EPISODES,
                                               par_name=par_name, par_value=par_value,
                                               parX_name=parX_name, parX_value=parX_value,
                                               parXX_name=parXX_name, parXX_value=parXX_value)
