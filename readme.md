@@ -8,7 +8,7 @@ Repo maintainer: Maximilian W. Hofer ([maximilian.hofer@epfl.ch](mailto:maximili
 	SOURCE:  https://github.com/mxhofer/OrgSim-RL  
 	LICENSE: Access to this code is provided under an MIT License.  
 
-The OrgSim-RL project investigates how automation can impact organizations using a reinforcement learning simulation.
+The OrgSim-RL platform is a reinforcement learning simulation tool to model organizational returns to specialization. 
 
 # Key directories and files
 
@@ -53,9 +53,21 @@ You will need to enable the following services:
    3. Image name
    4. Compute zone 
 
-## Run simulation
+## Run simulation on local machine (not recommended)
 
-The `config.yaml` file contains all parameter values. The `vm/vm.py` file starts VMs overwriting parameters values for automation (tau), environmental change (delta), and specializaiton (lambda).
+The `config.yaml` file contains all parameter values. The parameter values for specializaiton (lambda), automation (tau), environmental change (delta) are passed through the command line.
+
+Beware: the simulation with default parameters takes > 12 hours to complete on an M1 MacBook Pro. 
+
+1. In your terminal, navigate to the `/dyna-q` directory.
+2. Run the simulation:
+
+   `python dynaQ.py lambda <par_val> tau <par_val> delta <par_val>`
+3. Review results in `dyna-q/outputs/results/<simulation_date>/`
+
+## Run simulation on GCE (recommended)
+
+The `vm/vm.py` file starts VMs and overwrites parameter values for specializaiton (lambda), automation (tau), environmental change (delta).
 
 1. Set parameters in `config.yaml` 
 2. Set a value for the `TAG` variable at the top of `dyna-q/dynaQ.py` to identify the simulation run.
