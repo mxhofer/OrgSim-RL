@@ -278,7 +278,7 @@ def set_params(dyna_params_helper, maze_params_helper, episodes, par_name, par_v
     Set primary parameter value you want to iterate over
     :param dyna_params_helper: an instance of dyna
     :param maze_params_helper: an instance of maze
-    :param episodes: number of episodes
+    :param episodes: number of organizational episodes
     :param par_name: the first parameter name
     :param par_value: the first parameter value
     :param parX_name: the second parameter name (optional)
@@ -328,8 +328,7 @@ def set_params(dyna_params_helper, maze_params_helper, episodes, par_name, par_v
         raise ValueError('Unknown third parameter name.')
 
     # -- Set calculated values -----------------------------------------------------------------------------------------
-
-    maze_params_helper.GOAL_REWARD = round(10 * np.log(dyna_params_helper.LAMBDA_ + 1), 2)  # 10 scales benefits
+    maze_params_helper.GOAL_REWARD = round(maze_params_helper.PI * np.log(dyna_params_helper.LAMBDA_ + 1), 2)  # pi scales benefits
 
     # Specialization learning rate
     dyna_params_helper.ALPHA_PRIME = deepcopy(dyna_params_helper.ALPHA + dyna_params_helper.NU * np.log(dyna_params_helper.LAMBDA_))

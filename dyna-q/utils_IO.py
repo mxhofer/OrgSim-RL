@@ -7,7 +7,7 @@ import pickle
 
 # -- Import constants & functions --------------------------------------------------------------------------------------
 from utils import DIVIDER_WIDTH
-from utils_logging import print_maze, move_details_dyna
+from utils_logging import print_maze, step_details_dyna
 from dynaQ import START_DATE, START_TIME
 
 

@@ -7,7 +7,7 @@ import numpy as np
 
 class Diagnostics:
     """
-    Diagnostics for an organizational step.
+    Diagnostics for an episode.
     """
 
     def __init__(self, runs):
@@ -22,21 +22,20 @@ class Diagnostics:
         self.d = OrderedDict()
 
         for r in range(self.runs):
-            self.d[f'run_{r}'] = {'n_moves': [],
+            self.d[f'run_{r}'] = {'n_steps': [],
                                   'net_reward_to_org': [],
                                   'actionFromStart': [],
                                   'optimalPathLength': [],
                                   'optimalAction': [],
-                                  'explorationAttempts': [],
-                                  'exploration_path': [],
-                                  'exploitation_path': [],
-                                  'closed_door_path': [],
-                                  'noPrize': [],
+                                  'short_open_door_path': [],
+                                  'long_path': [],
+                                  'short_closed_door_path': [],
+                                  'noGoal': [],
                                   'leaders': [],
                                   'coordinationCostsAccumulated': [],
                                   'opportunityCostsAccumulated': [],
-                                  'policyInDomain_exploitation': [],
-                                  'policyInDomain_exploration': [],
+                                  'policyInDomain_longpath': [],
+                                  'policyInDomain_shortpath': [],
                                   'n_samplesModelDomain1': [],
                                   'n_samplesModelDomain2': [],
                                   'n_samplesModelDomain3': [],
@@ -46,8 +45,8 @@ class Diagnostics:
                                   'shortpath_states_share': [],
                                   'longpath_states_share': [],
                                   'neutral_states_count': [],
-                                  'exploration_states_count': [],
-                                  'exploitation_states_count': []
+                                  'shortpath_states_count': [],
+                                  'longpath_states_count': []
                                   }
 
     def to_disk(self, par_name_, par_value_, start_date, start_time, runs):

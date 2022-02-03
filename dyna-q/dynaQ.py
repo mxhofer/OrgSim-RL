@@ -17,24 +17,25 @@ START_TIME = dt.datetime.now().strftime('%H_%M_%S')
 # -- Maze wrapper ------------------------------------------------------------------------------------------------------
 class Maze:
     def __init__(self, startState, conditionalBanditStates, goalStates, wallStates,
-                 explorationStates, neutralStates, initDoor, doorStates, moveCost, movesExploit,
-                 movesExplore, delta, eta, doorSwitching):
+                 shortpathStates, neutralStates, initDoor, doorStates, stepCost, stepsLongPath,
+                 stepsShortPath, delta, eta, pi, doorSwitching):
         """
         Class for a maze, containing all the information about the environment.
-        :param conditionalBanditStates: conditional bandit states
-        :param startState: start state tuple
-        :param goalStates: list of goal states
-        :param wallStates: list of wall states
-        :param explorationStates: list of exploration states (i.e. states on exploration path)
-        :param neutralStates: list of neutral states (i.e. neither exploration nor exploitation)
-        :param initDoor: initial state of the doors
-        :param doorStates: list of door states
-        :param moveCost: cost for moving for the organization
-        :param movesExploit: number of moves on the exploitation path
-        :param movesExplore: number of moves on the exploration path
-        :param delta: stability
-        :param eta: coordination
-        :param doorSwitching: random or intervals switching of doors
+        :param conditionalBanditStates: Conditional bandit states
+        :param startState: Start state tuple
+        :param goalStates: List of goal states
+        :param wallStates: List of wall states
+        :param shortpathStates: List of short path states (i.e. states on shortpath path)
+        :param neutralStates: List of neutral states (i.e. neither shortpath nor longpath)
+        :param initDoor: Initial state of the doors (closed, random or half)
+        :param doorStates: List of door states
+        :param stepCost: Cost to make a step
+        :param stepsLongPath: Steps required for the risk-free path
+        :param stepsShortPath: Steps required for the risky path
+        :param delta: Number of times environment changes in a simulation
+        :param eta: Scaling of coordination costs as a function of specialization (𝝺)
+        :param pi: Scaling of reward at goal state as a function of specialization (𝝺)
+        :param doorSwitching: Switching times (random or intervals)
         """
 
         # Ensure valid inbound values
@@ -45,7 +46,7 @@ class Maze:
         assert 0 <= eta <= 1, f'ERROR: Check eta parameter value: {eta}'
         assert doorSwitching in ['random', 'intervals'], f'ERROR: Check doorSwitching parameter value: {doorSwitching}'
         assert initDoor in ['closed', 'random', 'half'], f'ERROR: Check initDoor parameter value: {initDoor}'
-        assert moveCost >= 0, f'ERROR: Check moveCost parameter value: {moveCost}'
+        assert stepCost >= 0, f'ERROR: Check stepCost parameter value: {stepCost}'
 
         # Actions
         self.ACTION_UP = 0
@@ -62,13 +63,13 @@ class Maze:
         self.CB_STATES = conditionalBanditStates
         self.GOAL_STATES = goalStates
         self.WALL_STATES = wallStates
-        self.EXPLORATION_STATES = explorationStates
+        self.EXPLORATION_STATES = shortpathStates
         self.NEUTRAL_STATES = neutralStates
         self.INIT_DOOR = initDoor
         self.DOOR_STATES = deepcopy(doorStates)
-        self.MOVE_COST_ORG = moveCost
-        self.MOVES_EXPLOIT = movesExploit
-        self.MOVES_EXPLORE = movesExplore
+        self.MOVE_COST_ORG = stepCost
+        self.MOVES_EXPLOIT = stepsLongPath
+        self.MOVES_EXPLORE = stepsShortPath
         self.DOOR_SWITCHING = doorSwitching
         self.MOVES_TO_DOOR = 6
         self.Q_SIZE = (self.MAZE_HEIGHT, self.MAZE_WIDTH, len(self.actions_indices))
@@ -89,6 +90,7 @@ class Maze:
         # Parameters
         self.DELTA = delta
         self.ETA = eta
+        self.PI = pi
 
         # Placeholder for goal amount
         self.GOAL_REWARD = None
@@ -114,7 +116,7 @@ class Maze:
         assert action in maze.actions_indices, 'ERROR: Incorrect action index in making a step.'
         assert agent_label is None or agent_label in [1, 2, 3, 4], 'ERROR: Incorrect agent label when making step.'
 
-        # Move x and y values
+        # Step x and y values
         x, y = deepcopy(state)
         if action == self.ACTION_UP:
             x = max(x - 1, 0)
@@ -130,11 +132,11 @@ class Maze:
         if [x, y] in self.CLOSED_DOOR_STATES:
             attempted_door = True
 
-        # Agent cannot move to (1) wall state, (2) previously visited states
+        # Agent cannot step to (1) wall state, (2) previously visited states
         if [x, y] in self.WALL_STATES or ([x, y] in self.visitedStates and state != self.START_STATE):
             x, y = state
 
-        # Agent cannot move to another agent's domain
+        # Agent cannot step to another agent's domain
         if agent_label is not None and state == self.START_STATE:
             if getDomainLabel([x, y], maze) not in map_agent_to_domains(agent_label, lambda_step):
                 x, y = state
@@ -150,49 +152,49 @@ class Maze:
 
 # -- Dyna-Q ------------------------------------------------------------------------------------------------------------
 class DynaParams:
-    def __init__(self, gamma, nu, planning, epsilon, alpha, lambda_, tau, kappa, phi, omega, runs, episodes,
+    def __init__(self, gamma, nu, rho, epsilon, alpha, lambda_, tau, kappa, phi, psi, runs, episodes,
                  verbose=0, vizLearning=False):
         """
         Class for the Dyna-Q agent, containing all parameters.
-        :param gamma: discount rate
-        :param nu: sclara for learning rate
-        :param planning: number of indirect learning steps
-        :param epsilon: exploration rate
-        :param alpha: learning rate
-        :param lambda_: specialization (number of agents = number of Q-tables)
-        :param tau: automation
-        :param kappa: time-based weight for model learning (encourages sampling long-untried transitions)
-        :param phi: coordination cost share under automation modality
-        :param omega: transition costs of entering or exiting automation
-        :param runs: number of independent runs
-        :param episodes: number of episodes
-        :param verbose: verbosity level for logging
-        :param vizLearning: visualize learning and back-propagation
+        :param gamma: Discount factor for Q-learning continuation value
+        :param nu: Scaling of learning rate (𝛂) as a function of specialization (𝝺)
+        :param rho: Number of indirect planning steps per agent per episode
+        :param epsilon: Probability of taking a random action on each step
+        :param alpha: Learning rate for Q-Learning when 𝝺 = 1
+        :param lambda_: Number of agents in a simulation
+        :param tau: Share of episodes that are automated in a simulation
+        :param kappa: Time-based weight for model learning (encourages sampling long-untried transitions)
+        :param phi: Percentage of coordination costs incurred under automation (𝛕) -- carrying costs
+        :param psi: Costs to transition in or out of automation as a function of lambda ( ψ * 𝝺 )
+        :param runs: Number of simulation runs
+        :param episodes: Number of simulation episodes for a simulation run
+        :param verbose: Verbosity level for logging
+        :param vizLearning: Visualize learning and back-propagation in maze
         """
 
         # Ensure valid inbound values
         assert 0 <= gamma < 1, f'ERROR: Check gamma parameter value in yaml: {gamma}'
         assert nu >= 0, f'ERROR: Check nu parameter value in yaml: {nu}'
-        assert planning >= 2, f'ERROR: Check planning parameter value in yaml: {planning}'
+        assert rho >= 2, f'ERROR: Check rho parameter value in yaml: {rho}'
         assert 0 <= epsilon <= 1, f'ERROR: Check epsilon parameter value in yaml: {epsilon}'
         assert 0 <= alpha < 1, f'ERROR: Check alpha parameter value in yaml: {alpha}'
         assert lambda_ in [1, 2, 4], f'ERROR: Check lambda parameter value in yaml: {lambda_}'
         assert 0 <= tau <= 1, f'ERROR: Check tau parameter value in yaml: {tau}'
         assert kappa <= 0.001, f'ERROR: Check kappa parameter value in yaml: {kappa}'
         assert 0 <= phi <= 1, f'ERROR: Check phi parameter value in yaml: {phi}'
-        assert 0 <= omega, f'ERROR: Check omega parameter value in yaml: {omega}'
+        assert 0 <= psi, f'ERROR: Check psi parameter value in yaml: {psi}'
 
         # Set parameter values
         self.GAMMA = gamma
         self.NU = nu
-        self.N_PLANNING = planning
+        self.RHO = rho
         self.EPSILON = epsilon
         self.ALPHA = alpha
         self.LAMBDA_ = lambda_
         self.TAU = deepcopy(tau)
         self.KAPPA = kappa
         self.PHI = phi
-        self.OMEGA = omega
+        self.PSI = psi
         self.RUNS = runs
         self.EPISODES = episodes
         self.VERBOSE = verbose
@@ -302,13 +304,13 @@ class MasterData:
         self.initialization_row = {'start_date': START_DATE,
                                    'start_time': START_TIME,
                                    'run_id': None,
-                                   'orgstep_id': None,
+                                   'episode_id': None,
                                    'lambda': None,
                                    'alpha': None,
                                    'alpha_prime': None,
                                    'nu': None,
                                    'epsilon': None,
-                                   'n_planning': None,
+                                   'rho': None,
                                    'delta': None,
                                    'eta': None,
                                    'door_switching': None,
@@ -316,11 +318,11 @@ class MasterData:
                                    'tau': None,
                                    'gamma': None,
                                    'runs': None,
-                                   'org_steps': None,
-                                   'moves': None,
+                                   'episodes': None,
+                                   'steps': None,
                                    'net_reward_to_org': None,
                                    'optimal_action': None,
-                                   'prize_amount': None,
+                                   'goal_amount': None,
                                    'coordination_costs': None,
                                    'opportunity_costs': None,
                                    'leader': None,
@@ -503,7 +505,7 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
     :param run_ep: run index
     :param diagnostics_instance_ep: diagnostics instance
     :return
-        episode_moves: number of moves in the episode
+        episode_steps: number of steps in the episode
         episode_reward: cumulative rewards gained in the episode
         episode_path: agent's path in this episode
         q_value: Q-values at the end of the episode
@@ -516,12 +518,12 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
     state = deepcopy(maze_params_ep.START_STATE)
     n_visits_per_state = np.zeros((maze_params_ep.MAZE_WIDTH, maze_params_ep.MAZE_HEIGHT))
     n_visits_per_state[state[0], state[1]] += 1.0
-    episode_moves, episode_benefits = 0, 0
-    exploration_ground_counter, exploitation_ground_counter = 0, 0
-    optimal_action_taken_per_move = []
+    episode_steps, episode_benefits = 0, 0
+    shortpath_ground_counter, longpath_ground_counter = 0, 0
+    optimal_action_taken_per_step = []
     next_state, Q_table = None, None
 
-    # -- Domain selection, automation || Parameter: NU (planning steps) & TAU (automation) -----------------------------
+    # -- Domain selection, automation || Parameter: RHO (planning steps) & TAU (automation) -----------------------------
     # Select leading agent based on Q-values at start
     Q_start, max_q, all_action_values = org_ep.select_leader(dyna_params_=dyna_params_ep,
                                                              maze_params_=maze_params_ep)
@@ -576,10 +578,10 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
         # -- Action selection ------------------------------------------------------------------------------------------
         action = None
         if org_ep.leader_name == 'AUTOMATION':
-            action = org_ep.automation_routine[episode_moves][1]
+            action = org_ep.automation_routine[episode_steps][1]
             valid_actions = ['automation']
         elif 'AGENT' in org_ep.leader_name:
-            if episode_moves == 0:  # Action selection at start state
+            if episode_steps == 0:  # Action selection at start state
                 action = deepcopy(a_start_index)
             else:
                 action, random_action, valid_actions = action_selection(state, Q_table, maze_params_ep, dyna_params_ep)
@@ -599,16 +601,16 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
 
         # Optimal action selected?
         if state != maze_params_ep.START_STATE:
-            optimal_action_taken_per_move.append(optimal_action(state, action, maze_params_ep))
+            optimal_action_taken_per_step.append(optimal_action(state, action, maze_params_ep))
         else:
-            optimal_action_taken_per_move.append(1)
+            optimal_action_taken_per_step.append(1)
 
         # Keep track of state, action, reward, and metrics
         episode_trace.append((state, action, reward))
         episode_benefits += reward
         n_visits_per_state[next_state[0], next_state[1]] += 1.0
-        exploration_ground_counter += int(state in maze_params_ep.EXPLORATION_STATES)
-        exploitation_ground_counter += int(
+        shortpath_ground_counter += int(state in maze_params_ep.EXPLORATION_STATES)
+        longpath_ground_counter += int(
             state not in maze_params_ep.NEUTRAL_STATES and state not in maze_params_ep.EXPLORATION_STATES)
 
         # -- Record experience – feed Model ----------------------------------------------------------------------------
@@ -639,7 +641,7 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
             else:
                 q_values_reduced = deepcopy(org_ep.q_tables[0])
             print_Q(q_values_reduced, maze_params_ep, dyna_params_ep, state,
-                    title=f'\n\n\t\tMove: {episode_moves}. Episode: {episode_ep}. Direct learning, before update. '
+                    title=f'\n\n\t\tStep: {episode_steps}. Episode: {episode_ep}. Direct learning, before update. '
                           f'Random A: {random_action}. Valid actions: {valid_actions}. Reward: {reward}\n'
                           f'Maximum Q-values of valid actions.\n')
             org_ep.input_value = input(
@@ -659,10 +661,10 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
                 n_visits_matrix = np.insert(n_visits_matrix, 0, labels, axis=0)  # add column labels
                 n_visits_matrix = np.insert(n_visits_matrix, 0, [0] + labels, axis=1)  # add row labels
                 print(n_visits_matrix)
-                input('ENTER = continue to next move.')
-            elif org_ep.input_value == 'd':  # Debug next moves
+                input('ENTER = continue to next step.')
+            elif org_ep.input_value == 'd':  # Debug next steps
                 org_ep.show_again_from = episode_ep + 10
-                input('ENTER = continue to next move.')
+                input('ENTER = continue to next step.')
             elif org_ep.input_value == 'i':
                 show_indirect_updates = True
                 if org_ep.leader_name == 'AUTOMATION': print('No indirect learning: automation leads.')
@@ -671,7 +673,7 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
                 print(f'\tAction values for state {s}')
                 print('\tDirections: ', [i.strip() for i in maze_params_ep.actions_labels])
                 print('\tAction vals: ', q_values_reduced[int(s[0]), int(s[1]), :])
-                input('ENTER = continue to next move.')
+                input('ENTER = continue to next step.')
             elif org_ep.input_value == 'f':
                 dyna_params_ep.VIZLEARNING = False
             else:
@@ -706,19 +708,18 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
             # Update Q-table
             org_ep.q_tables[org_ep.q_table_index] = deepcopy(Q_table)
 
-            # -- INDIRECT Q-Learning update | parameter: NU (returns to specialization) --------------------------------
-            if dyna_params_ep.N_PLANNING > 0:
+            # -- INDIRECT Q-Learning update | Parameter: NU (returns to specialization) --------------------------------
+            if dyna_params_ep.RHO > 0:
                 for agent_index in range(dyna_params_ep.LAMBDA_):  # Each agent learns indirectly
                     agent_label = agent_index + 1
 
-                    assert len(
-                        org_ep.q_tables) > agent_index, 'ERROR: mis-match in agent index or label during planning.'
+                    assert len(org_ep.q_tables) > agent_index, 'ERROR: mis-match in agent index or label during planning.'
 
                     # An agent can explore multiple domains at a time (if lambda is 1 or 2)
                     domains_for_agent_to_explore = map_agent_to_domains(agent_label, dyna_params_ep.LAMBDA_)
                     planning_counter = 0
 
-                    while planning_counter < dyna_params_ep.N_PLANNING:
+                    while planning_counter < dyna_params_ep.RHO:
 
                         # Select a domain to sample from at random
                         domain_to_explore = np.random.choice(domains_for_agent_to_explore)
@@ -756,14 +757,14 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
                                 q_values_reduced = np.maximum.reduce(org_ep.q_tables) + np.minimum.reduce(
                                     org_ep.q_tables)
                                 print_Q(q_values_reduced, maze_params_ep, dyna_params_ep, state_,
-                                        title=f'\n\n\t\tIndirect learning, after update. Org step {episode_ep}. Move {episode_moves}. '
+                                        title=f'\n\n\t\tIndirect learning, after update. Org step {episode_ep}. Step {episode_steps}. '
                                               f'State: {state_} Next_state: {next_state_} A: {action_} Reward: {reward_}\n'
                                               f'\t\tMaximum Q-values of valid actions.\n')
                                 input('Press ENTER to continue.')
 
         # -- Populate trace --------------------------------------------------------------------------------------------
         q_after = deepcopy(Q_table[state[0], state[1], :])
-        move_dict_for_logging = dict({
+        step_dict_for_logging = dict({
             'state': state,
             'next_state': next_state,
             'action': str(action) + ' (' + maze_params_ep.actions_labels[action].strip() + ')',
@@ -775,20 +776,20 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
             'Random action': random_action,
             'Domain': getDomainLabel(state, maze_params_ep),
             'Door status': maze_params_ep.CLOSED_DOOR_STATES,
-            'Optimal action': bool(optimal_action_taken_per_move[-1]),
-            'neutral_states_counter': episode_moves - exploration_ground_counter - exploitation_ground_counter,
-            'exploration_states_counter': exploration_ground_counter,
-            'exploitation_states_counter': exploitation_ground_counter
+            'Optimal action': bool(optimal_action_taken_per_step[-1]),
+            'neutral_states_counter': episode_steps - shortpath_ground_counter - longpath_ground_counter,
+            'shortpath_states_counter': shortpath_ground_counter,
+            'longpath_states_counter': longpath_ground_counter
         })
 
-        if dyna_params_ep.VERBOSE >= 3: print(move_details_dyna(move=episode_moves, move_dict_=move_dict_for_logging))
+        if dyna_params_ep.VERBOSE >= 3: print(step_details_dyna(step=episode_steps, step_dict_=step_dict_for_logging))
 
-        # -- Update state, and move counter ----------------------------------------------------------------------------
+        # -- Update state, and step counter ----------------------------------------------------------------------------
         state = deepcopy(next_state)
-        episode_moves += 1
+        episode_steps += 1
 
-        # -- End organizational step | parameter: TAU (automation) -----------------------------------------------------
-        if org_ep.leader_name == 'AUTOMATION' and len(org_ep.automation_routine) == episode_moves:  # end of routine
+        # -- End episode | Parameter: TAU (automation) -----------------------------------------------------
+        if org_ep.leader_name == 'AUTOMATION' and len(org_ep.automation_routine) == episode_steps:  # end of routine
             org_ep.routine_finished = True
             break
 
@@ -799,7 +800,7 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
     maze_params_ep.visitedStates = []
 
     # -- Organizational accounting -------------------------------------------------------------------------------------
-    # Coordination costs | parameter: ETA (coordination)
+    # Coordination costs | Parameter: ETA (coordination)
     automation_condition = org_ep.leader_name == 'AUTOMATION'
     if not automation_condition:
         episode_coordinationCosts = 1 *                      maze_params_ep.ETA * (dyna_params_ep.LAMBDA_ ** (5 / 3) - 1)
@@ -809,19 +810,19 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
            or (episode_coordinationCosts == 0 and dyna_params_ep.LAMBDA_ == 1), f'ERROR: Coordination costs with lambda {dyna_params_ep.LAMBDA_} and Automation {automation_condition} cannot equal {episode_coordinationCosts}'
 
     # Final organization net reward
-    sum_of_move_costs = episode_moves * maze_params_ep.MOVE_COST_ORG
-    assert sum_of_move_costs in [6, 7, 11], f'ERROR: Sum of move costs cannot equal {sum_of_move_costs}'
+    sum_of_step_costs = episode_steps * maze_params_ep.MOVE_COST_ORG
+    assert sum_of_step_costs in [6, 7, 11], f'ERROR: Sum of step costs cannot equal {sum_of_step_costs}'
 
     # Transition costs
-    if episode_ep > 0 and dyna_params_ep.OMEGA > 0:
+    if episode_ep > 0 and dyna_params_ep.PSI > 0:
 
         # Enter automation
         if org_ep.leader_name == 'AUTOMATION' and diagnostics_instance_ep['leaders'][-1] != 'AUTOMATION':
-            transition_costs = dyna_params_ep.OMEGA * dyna_params_ep.LAMBDA_
+            transition_costs = dyna_params_ep.PSI * dyna_params_ep.LAMBDA_
 
         # Exit automation
         elif org_ep.leader_name != 'AUTOMATION' and diagnostics_instance_ep['leaders'][-1] == 'AUTOMATION':
-            transition_costs = dyna_params_ep.OMEGA * dyna_params_ep.LAMBDA_
+            transition_costs = dyna_params_ep.PSI * dyna_params_ep.LAMBDA_
 
         else:
             transition_costs = 0
@@ -831,7 +832,7 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
     # Add transition costs to coordination costs
     episode_coordinationCosts = episode_coordinationCosts + transition_costs
 
-    episode_benefits = episode_benefits - sum_of_move_costs
+    episode_benefits = episode_benefits - sum_of_step_costs
     episode_net_reward = episode_benefits - episode_coordinationCosts
 
     # Worst case: no goal + no automation
@@ -852,25 +853,25 @@ def simulate_episode(org_ep, model_ep, maze_params_ep, dyna_params_ep, episode_e
     assert total_lost_opportunity >= 0, f'ERROR: Total losses should be positive, not {total_lost_opportunity}'
     assert episode_opportunityCosts >= -0.0001, f'ERROR: Opportunity costs should be positive or zero, not {episode_opportunityCosts}'
 
-    # Print organizational step level details
-    if dyna_params_ep.VERBOSE >= 2: print(episode_details_expost(episode_ep, maze_params_ep, episode_moves,
+    # Print episode level details
+    if dyna_params_ep.VERBOSE >= 2: print(episode_details_expost(episode_ep, maze_params_ep, episode_steps,
                                                                  episode_net_reward, episode_coordinationCosts,
                                                                  episode_trace,
-                                                                 next_state, optimal_action_taken_per_move,
+                                                                 next_state, optimal_action_taken_per_step,
                                                                  episode_path,
                                                                  episode_opportunityCosts, best_potentional_net_reward))
     assert Q_table is not None and next_state is not None, f'ERROR: Q-value is {Q_table} and next_state is {next_state}'
-    assert exploration_ground_counter + exploitation_ground_counter < episode_moves, f'ERROR: explor. exploit. ground counters are too large.'
+    assert shortpath_ground_counter + longpath_ground_counter < episode_steps, f'ERROR: explor. exploit. ground counters are too large.'
 
-    return episode_moves, episode_net_reward, Q_table, episode_path, a_start_index, \
-           np.mean(optimal_action_taken_per_move), episode_coordinationCosts, episode_opportunityCosts, \
-           n_visits_per_state, exploration_ground_counter, exploitation_ground_counter
+    return episode_steps, episode_net_reward, Q_table, episode_path, a_start_index, \
+           np.mean(optimal_action_taken_per_step), episode_coordinationCosts, episode_opportunityCosts, \
+           n_visits_per_state, shortpath_ground_counter, longpath_ground_counter
 
 
 # -- Organization ------------------------------------------------------------------------------------------------------
 def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, run_start_time_o):
     """
-    Function to simulate the organization, observing and tracking the outcomes per organizational step.
+    Function to simulate the organization, observing and tracking the outcomes per episode.
     :param maze_params_o: a maze instance containing all information about the environment
     :param dyna_params_o: a DynaParams instance containing all information about the Dyna-Q agent
     :param diagnostics_instance_o: dictionary to track org step meta data
@@ -885,16 +886,14 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
     org = Organization(dyna_params_o, maze_params_o)
     model = TimeModel(maze_params=maze_params_o, kappa=dyna_params_o.KAPPA)
 
-    # -- Execute organizational steps ----------------------------------------------------------------------------------
+    # -- Execute episodes ----------------------------------------------------------------------------------
     for episode_id in range(dyna_params_o.EPISODES):
 
         # -- Track maze configuration ----------------------------------------------------------------------------------
-        r_dict = f'run_{run_o}'
-        o_dict = f'episode_{episode_id}'
         diagnostics_instance_o['maze'] = maze_params_o.__dict__
         diagnostics_instance_o['dyna'] = dyna_params_o.__dict__
 
-        # -- Switch door state at intervals or random organizational steps -----------------------------------------
+        # -- Switch door state at intervals or random episodes -----------------------------------------
         # Interval switching (e.g. [500, 1000, 1500])
         if maze_params_o.DOOR_SWITCHING == 'intervals':
             DOOR_SWITCH_POINTS = switch_points_intervals(dyna_params_o.EPISODES, maze_params_o.DELTA)
@@ -908,18 +907,18 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
         # --------------------------------------------------------------------------------------------------------------
         # -- Run a single org step -------------------------------------------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------
-        episode_moves, episode_net_reward, q_values_afterEpisode, path_taken, a_start, opt_action_mean, coordination_costs, opportunityCosts, n_visits_per_state, exploration_states_counter, exploitation_states_counter = \
+        episode_steps, episode_net_reward, q_values_afterEpisode, path_taken, a_start, opt_action_mean, coordination_costs, opportunityCosts, n_visits_per_state, shortpath_states_counter, longpath_states_counter = \
             simulate_episode(org, model, maze_params_o, dyna_params_o, episode_id, run_o, diagnostics_instance_o)
 
-        # -- Track outcomes of the organizational step -----------------------------------------------------------------
+        # -- Track outcomes of the episode -----------------------------------------------------------------
         diagnostics_instance_o['net_reward_to_org'].append(episode_net_reward)
-        diagnostics_instance_o['n_moves'].append(episode_moves)
+        diagnostics_instance_o['n_steps'].append(episode_steps)
         diagnostics_instance_o['leaders'].append(org.leader_name)
         diagnostics_instance_o['coordinationCostsAccumulated'].append(coordination_costs)
         diagnostics_instance_o['opportunityCostsAccumulated'].append(opportunityCosts)
-        diagnostics_instance_o['exploitation_path'].append(int('exploitation' in path_taken))
-        diagnostics_instance_o['exploration_path'].append(int('exploration' in path_taken))
-        diagnostics_instance_o['closed_door_path'].append(int('closed door' in path_taken))
+        diagnostics_instance_o['long_path'].append(int('long path' in path_taken))
+        diagnostics_instance_o['short_open_door_path'].append(int('short path (open door)' in path_taken))
+        diagnostics_instance_o['short_closed_door_path'].append(int('short path (closed door)' in path_taken))
         diagnostics_instance_o['optimalAction'].append(opt_action_mean)
         diagnostics_instance_o['actionFromStart'].append(int(a_start))
         diagnostics_instance_o['n_samplesModelDomain1'].append(len(model.model[1]))
@@ -927,23 +926,23 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
         diagnostics_instance_o['n_samplesModelDomain3'].append(len(model.model[3]))
         diagnostics_instance_o['n_samplesModelDomain4'].append(len(model.model[4]))
         diagnostics_instance_o['n_visits_per_state'] += n_visits_per_state
-        diagnostics_instance_o['neutral_states_share'].append((episode_moves - exploration_states_counter - exploitation_states_counter) / episode_moves)
-        diagnostics_instance_o['shortpath_states_share'].append(exploration_states_counter / episode_moves)
-        diagnostics_instance_o['longpath_states_share'].append(exploitation_states_counter / episode_moves)
-        diagnostics_instance_o['neutral_states_count'].append(episode_moves - exploration_states_counter - exploitation_states_counter)
-        diagnostics_instance_o['exploration_states_count'].append(exploration_states_counter)
-        diagnostics_instance_o['exploitation_states_count'].append(exploitation_states_counter)
+        diagnostics_instance_o['neutral_states_share'].append((episode_steps - shortpath_states_counter - longpath_states_counter) / episode_steps)
+        diagnostics_instance_o['shortpath_states_share'].append(shortpath_states_counter / episode_steps)
+        diagnostics_instance_o['longpath_states_share'].append(longpath_states_counter / episode_steps)
+        diagnostics_instance_o['neutral_states_count'].append(episode_steps - shortpath_states_counter - longpath_states_counter)
+        diagnostics_instance_o['shortpath_states_count'].append(shortpath_states_counter)
+        diagnostics_instance_o['longpath_states_count'].append(longpath_states_counter)
 
         # -- Master dictionary for Google BQ ---------------------------------------------------------------------------
         empty_row = deepcopy(master_data.initialization_row)
         empty_row['run_id'] = run_o
-        empty_row['orgstep_id'] = episode_id
+        empty_row['episode_id'] = episode_id
         empty_row['lambda'] = dyna_params_o.LAMBDA_
         empty_row['alpha'] = dyna_params_o.ALPHA
         empty_row['alpha_prime'] = dyna_params_o.ALPHA_PRIME
         empty_row['nu'] = dyna_params_o.NU
         empty_row['epsilon'] = dyna_params_o.EPSILON
-        empty_row['n_planning'] = dyna_params_o.N_PLANNING
+        empty_row['rho'] = dyna_params_o.RHO
         empty_row['delta'] = maze_params_o.DELTA
         empty_row['eta'] = maze_params_o.ETA
         empty_row['door_switching'] = maze_params_o.DOOR_SWITCHING
@@ -951,18 +950,18 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
         empty_row['tau'] = dyna_params_o.TAU
         empty_row['gamma'] = dyna_params_o.GAMMA
         empty_row['runs'] = RUNS
-        empty_row['org_steps'] = EPISODES
-        empty_row['moves'] = episode_moves
+        empty_row['episodes'] = EPISODES
+        empty_row['steps'] = episode_steps
         empty_row['net_reward_to_org'] = episode_net_reward
         empty_row['optimal_action'] = opt_action_mean
-        empty_row['prize_amount'] = maze_params_o.GOAL_REWARD
+        empty_row['goal_amount'] = maze_params_o.GOAL_REWARD
         empty_row['coordination_costs'] = coordination_costs
         empty_row['opportunity_costs'] = opportunityCosts
         empty_row['leader'] = org.leader_name
         empty_row['action_from_start'] = a_start
-        empty_row['shortpath_states_share'] = exploration_states_counter / episode_moves
-        empty_row['longpath_states_share'] = exploitation_states_counter / episode_moves
-        empty_row['neutral_states_share'] = (episode_moves - exploration_states_counter - exploitation_states_counter) / episode_moves
+        empty_row['shortpath_states_share'] = shortpath_states_counter / episode_steps
+        empty_row['longpath_states_share'] = longpath_states_counter / episode_steps
+        empty_row['neutral_states_share'] = (episode_steps - shortpath_states_counter - longpath_states_counter) / episode_steps
         empty_row['path_taken'] = path_taken
 
         # -- Update environment doors || Parameter: DELTA (stability) --------------------------------------------------
@@ -984,14 +983,11 @@ def simulate_org(maze_params_o, dyna_params_o, diagnostics_instance_o, run_o, ru
         # -- Track various org step outcomes ---------------------------------------------------------------------------
         # Optimal path length
         optimal_path_length = optimal_path_length_routine(org.q_tables[org.q_table_index], maze_params_o)[0]
-        if org.leader_name != 'AUTOMATION':
-            diagnostics_instance_o['optimalPathLength'].append(optimal_path_length)
-        else:
-            diagnostics_instance_o['optimalPathLength'].append(np.nan)
+        diagnostics_instance_o['optimalPathLength'].append(optimal_path_length)
 
-        # Is the current policy in that domain an exploration or exploitation policy?
-        diagnostics_instance_o['policyInDomain_exploitation'].append(int(optimal_path_length == maze_params_o.MOVES_EXPLOIT))
-        diagnostics_instance_o['policyInDomain_exploration'].append(int(optimal_path_length == maze_params_o.MOVES_EXPLORE))
+        # Is the current policy in that domain an shortpath or longpath policy?
+        diagnostics_instance_o['policyInDomain_longpath'].append(int(optimal_path_length == maze_params_o.MOVES_EXPLOIT))
+        diagnostics_instance_o['policyInDomain_shortpath'].append(int(optimal_path_length == maze_params_o.MOVES_EXPLORE))
 
         # Add to master data
         assert None not in empty_row.values(), 'ERROR: None cannot be in data_dict'
@@ -1054,26 +1050,27 @@ if __name__ == '__main__':
                 conditionalBanditStates=config['maze']['conditionalBanditStates'],
                 goalStates=config['maze']['goalStates'],
                 wallStates=config['maze']['wallStates'],
-                explorationStates=config['maze']['explorationStates'],
+                shortpathStates=config['maze']['shortpathStates'],
                 neutralStates=config['maze']['neutralStates'],
                 initDoor=config['maze']['initDoor'],
                 doorStates=config['maze']['doorStates'],
-                moveCost=config['maze']['moveCost'],
-                movesExploit=config['maze']['movesExploit'],
-                movesExplore=config['maze']['movesExplore'],
+                stepCost=config['maze']['stepCost'],
+                stepsLongPath=config['maze']['stepsLongPath'],
+                stepsShortPath=config['maze']['stepsShortPath'],
                 delta=config['maze']['delta'],
                 eta=config['maze']['eta'],
+                pi=config['maze']['pi'],
                 doorSwitching=config['maze']['doorSwitching'])
     dyna = DynaParams(gamma=config['dyna']['gamma'],
                       nu=config['dyna']['nu'],
-                      planning=config['dyna']['planning'],
+                      rho=config['dyna']['rho'],
                       epsilon=config['dyna']['epsilon'],
                       alpha=config['dyna']['alpha'],
                       lambda_=config['dyna']['lambda'],
                       tau=config['dyna']['tau'],
                       kappa=config['dyna']['kappa'],
                       phi=config['dyna']['phi'],
-                      omega=config['dyna']['omega'],
+                      psi=config['dyna']['psi'],
                       runs=config['dyna']['runs'],
                       episodes=config['dyna']['episodes'],
                       verbose=config['simulation']['verbose'],

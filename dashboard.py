@@ -40,29 +40,33 @@ def format_parameters(query_result, lambdas=None, taus=None):
     :return: parameter string
     """
 
-    # It's the pythonic way
+    # It's the pythonic way ...
     if taus is None:
         taus = []
     if lambdas is None:
         lambdas = []
 
-    pars_to_show = ['start_date', 'start_time', 'lambda', 'alpha', 'alpha_prime', 'nu', 'epsilon', 'n_planning',
-                    'delta', 'eta', 'door_switching', 'init_door', 'tau', 'gamma', 'runs', 'org_steps']
-
-    taus = [round(t_formatting, 2) for t_formatting in taus]
+    pars_to_show = ['start_date', 'start_time', 'lambda', 'alpha', 'alpha_prime', 'nu', 'epsilon', 'rho',
+                    'delta', 'eta', 'door_switching', 'init_door', 'tau', 'gamma', 'runs', 'episodes']
+    taus = [round(t, 2) for t in taus]
+    index_values = []
     pars_dict = {'Parameter value': []}
     for k, v in query_result[0].items():
         if k in pars_to_show:
             if k == 'lambda' and len(lambdas) > 0:
                 pars_dict['Parameter value'].append(str(lambdas))
+                index_values.append('lambda')
             elif k == 'tau' and len(taus) > 0:
                 pars_dict['Parameter value'].append(str(taus))
+                index_values.append('tau')
             elif type(v) == str or type(v) == datetime.date:
                 pars_dict['Parameter value'].append(str(v))
+                index_values.append(k)
             else:
                 pars_dict['Parameter value'].append(str(round(v, 2)))
+                index_values.append(k)
 
-    return pd.DataFrame(pars_dict, index=pars_to_show)
+    return pd.DataFrame(pars_dict, index=index_values)
 
 
 def format_validation(query_result):

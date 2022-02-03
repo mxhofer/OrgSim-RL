@@ -1,33 +1,34 @@
 # Simulation parameters
 simulation:
-  verbose: 1            # 0 = None, 1 = run-level, 2 = organizational step level, 3 = move-level
-  log: false            # log all output (set to false when testing)
-  vizLearning: false    # visualize Q-value back-propagation?
-  bucket: true          # save to bucket?
+  verbose: 1            # 0 = None, 1 = run-level, 2 = episode-level, 3 = step-level
+  log: false            # Log all output (set to false when testing)
+  vizLearning: false    # Visualize Q-value back-propagation?
+  bucket: true          # Save to bucket?
 
 # Learning parameters for the Dyna agent
 dyna:
-  episodes: 1000 # default: 1000
-  runs: 5000     # default: 5000 (runtime at 5000 ~ 14 hours)
-  gamma: 0.9     # discount (default: 0.9)
-  planning: 4    # number of planning steps for indirect learning (default: 4)
-  epsilon: 0.1   # exploration rate (default: 0.1)
-  alpha: 0.3     # learning rate (default: 0.3)
-  nu: 0.35       # scalar for learning rate (default: 0.35)
-  lambda: 2      # specialization (1, 2 or 4)
-  tau: 0         # automation (default: 0)
-  kappa: 0       # time-based weight for model learning (default: 0)
-  phi: 0.5       # coordination cost share under automation (default: 0.5)
-  omega: 0       # transition costs of entering or exiting automation (default: 0)
+  episodes: 1000 # Number of simulation episodes for a simulation run (default: 1000)
+  runs: 5000     # Number of simulation runs (default: 5000; runtime at 5000 ~ 14 hours)
+  gamma: 0.9     # Discount factor for Q-learning continuation value (default: 0.9)
+  rho: 4         # Number of indirect planning steps per agent per episode (default: 4)
+  epsilon: 0.1   # Probability of taking a random action on each step (default: 0.1)
+  alpha: 0.3     # Learning rate for Q-Learning when 𝝺 = 1 (default: 0.3)
+  nu: 0.35       # Scaling of learning rate (𝛂) as a function of specialization (𝝺) (default: 0.35)
+  lambda: 2      # Number of agents in a simulation (1, 2 or 4)
+  tau: 0         # Share of episodes that are automated in a simulation
+  kappa: 0       # Time-based weight for model learning (default: 0)
+  phi: 0.5       # Percentage of coordination costs incurred under automation (𝛕) (default: 0.5)
+  psi: 0         # Costs to transition in or out of automation as a function of lambda ( ψ * 𝝺 ) (default: 0)
 
 # Maze parameters
 maze:
-  moveCost: 1   # costs to make a move (default: 1)
-  movesExploit: 11
-  movesExplore: 7
-  delta: 0      # frequency of environmental change
-  eta: 0.9      # coordination cost scalar (default: 0.9)
-  initDoor: half  # "closed" or "random" or "half" (default: half)
+  stepCost: 1        # Cost to make a step
+  stepsLongPath: 11  # Steps required for the risk-free path
+  stepsShortPath: 7  # Steps required for the risky path
+  delta: 0           # Number of times environment changes in a simulation
+  eta: 0.9           # Scaling of coordination costs as a function of specialization (𝝺) (default: 0.9)
+  pi: 10             # Scaling of reward at goal state as a function of specialization (𝝺) (default: 10)
+  initDoor: half     # "closed" or "random" or "half" (default: half)
   doorSwitching: intervals  # "random" or "intervals" (default: intervals)
   startState: [6, 6]
   conditionalBanditStates:
@@ -36,15 +37,15 @@ maze:
     - [6, 3]
     - [6, 9]
   doorStates:
-    - [2, 4]  # domain 1
-    - [10, 8] # domain 2
-    - [8, 2]  # domain 3
-    - [4, 10] # domain 4
+    - [2, 4]  # Domain 1
+    - [10, 8] # Domain 2
+    - [8, 2]  # Domain 3
+    - [4, 10] # Domain 4
   goalStates:
-    - [1, 4]  # domain 1
-    - [11, 8] # domain 2
-    - [8, 1]  # domain 3
-    - [4, 11] # domain 4
+    - [1, 4]  # Domain 1
+    - [11, 8] # Domain 2
+    - [8, 1]  # Domain 3
+    - [4, 11] # Domain 4
   wallStates:
     - [ 0, 0 ]
     - [ 0, 1 ]
@@ -158,31 +159,31 @@ maze:
     - [ 12, 10 ]
     - [ 12, 11 ]
     - [ 12, 12 ]
-  explorationStates:
-    - [3, 5] # domain 1
+  shortpathStates:
+    - [3, 5] # Domain 1
     - [3, 4]
     - [2, 4]
-    - [9, 7] # domain 2
+    - [9, 7] # Domain 2
     - [9, 8]
     - [10, 8]
-    - [7, 3] # domain 3
+    - [7, 3] # Domain 3
     - [8, 3]
     - [8, 2]
-    - [5, 9] # domain 4
+    - [5, 9] # Domain 4
     - [4, 9]
     - [4, 10]
   neutralStates:
-    - [6, 6] # start
-    - [5, 6] # domain 1
+    - [6, 6] # Start
+    - [5, 6] # Domain 1
     - [4, 6]
     - [3, 6]
-    - [7, 6] # domain 2
+    - [7, 6] # Domain 2
     - [8, 6]
     - [9, 6]
-    - [6, 5] # domain 3
+    - [6, 5] # Domain 3
     - [6, 4]
     - [6, 3]
-    - [6, 7] # domain 4
+    - [6, 7] # Domain 4
     - [6, 8]
     - [6, 9]
 

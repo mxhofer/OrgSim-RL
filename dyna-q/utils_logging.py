@@ -46,6 +46,7 @@ def print_maze(maze, dyna_params):
     print('\t>> Maze parameters at start of run. '.ljust(38) +
           f'delta: {maze.DELTA}'.ljust(16) +
           f'eta: {maze.ETA}'.ljust(12) +
+          f'pi: {maze.PI}'.ljust(10) +
           f'initDoor: {maze.INIT_DOOR}'.ljust(18) +
           f'doorSwitching: {maze.DOOR_SWITCHING}'.ljust(28) +
           f'costs of coord.: {round((dyna_params.LAMBDA_ ** 2 - 1) * maze.ETA, 2)}'.ljust(30) +
@@ -307,10 +308,10 @@ def dyna_pars(dyna, with_dividers=True):
          f'epsilon: {dyna.EPSILON}'.ljust(15) + \
          f'alpha: {dyna.ALPHA}'.ljust(12) + \
          f'alpha\': {dyna.ALPHA_PRIME}'.ljust(14) + \
-         f'planning: {dyna.N_PLANNING}'.ljust(14) + \
+         f'rho: {dyna.RHO}'.ljust(12) + \
          f'kappa: {dyna.KAPPA}'.ljust(14) + \
          f'phi: {dyna.PHI}'.ljust(12) + \
-         f'omega: {dyna.OMEGA}'.ljust(14) + \
+         f'psi: {dyna.PSI}'.ljust(12) + \
          f'runs: {dyna.RUNS}'.ljust(12) + \
          f'episodes: {dyna.EPISODES}'.ljust(12) + \
          '\n'
@@ -358,33 +359,33 @@ def episode_details_exante(ep, org, maze_params, a_start, random_action, max_q, 
     return s
 
 
-def episode_details_expost(orgStep, maze_params, orgStep_moves, orgStep_reward, coordination_costs, trace, next_state,
-                           optimal_action_taken, orgStep_path, orgStep_opportunityCosts, best_potentional_net_reward):
+def episode_details_expost(episode, maze_params, episode_steps, episode_reward, coordination_costs, trace, next_state,
+                           optimal_action_taken, episode_path, episode_opportunityCosts, best_potentional_net_reward):
     """
     Generate a string with all organizational details after goal reward was found.
-    :param orgStep: current organizational step
+    :param episode: current episode
     :param maze_params: an instance of maze
-    :param orgStep_moves: number of moves in the organizational step
-    :param orgStep_reward: accumulate reward of the organizational step
+    :param episode_steps: number of steps in the episode
+    :param episode_reward: accumulate reward of the episode
     :param coordination_costs: cumulative coorindation costs
     :param trace: trace of the state-action-reward sequence
     :param next_state: next state tuple
     :param optimal_action_taken: list of indicators whether optimal action was taken
-    :param orgStep_path: string of what path the org took
-    :param orgStep_opportunityCosts: opportunity costs
+    :param episode_path: string of what path the org took
+    :param episode_opportunityCosts: opportunity costs
     :param best_potentional_net_reward: best possible net reward for this org step
     :return: string containing all organizational details
     """
-    s = '\n\tOrganizational step: ' + \
-        f'\t{orgStep}'.ljust(12) + \
-        f'Moves: {orgStep_moves}'.ljust(16) + \
-        f'Overall reward : {round(orgStep_reward, 2)}'.ljust(26) + \
+    s = '\n\tEpisode: ' + \
+        f'\t{episode}'.ljust(12) + \
+        f'Steps: {episode_steps}'.ljust(16) + \
+        f'Overall reward : {round(episode_reward, 2)}'.ljust(26) + \
         f'Goal : {round(maze_params.GOAL_REWARD, 2)}'.ljust(18) + \
         f'Coordination costs: {round(coordination_costs, 2)}'.ljust(28) + \
-        f'Opportunity costs: {round(orgStep_opportunityCosts, 2)}'.ljust(26) + \
-        f'Moving costs: {round(orgStep_moves * maze_params.MOVE_COST_ORG, 2)}'.ljust(22) + \
+        f'Opportunity costs: {round(episode_opportunityCosts, 2)}'.ljust(26) + \
+        f'Moving costs: {round(episode_steps * maze_params.MOVE_COST_ORG, 2)}'.ljust(22) + \
         f'Best possible: {round(best_potentional_net_reward, 2)}'.ljust(24) + \
-        f'Path: {orgStep_path}'.ljust(38) + \
+        f'Path: {episode_path}'.ljust(38) + \
         f'% optimal actions: {round(np.mean(optimal_action_taken)*100, 2)}%'.ljust(28) + \
         '\n\tPath taken: {}\n'.format(' | '.join(
                 [f'{sar[0]} -> {maze_params.actions_labels[sar[1]].strip()} ({round(sar[2], 2)})' for sar in
@@ -393,30 +394,30 @@ def episode_details_expost(orgStep, maze_params, orgStep_moves, orgStep_reward, 
     return s
 
 
-def move_details_dyna(move, move_dict_):
+def step_details_dyna(step, step_dict_):
     """
-    Generate string with all move-level details.
+    Generate string with all step-level details.
     NB: keep the .format() expression to avoid double quotation marks
-    :param move: current move counter
-    :param move_dict_: dictionary with all move-level details
-    :return: string with all move-level details
+    :param step: current step counter
+    :param step_dict_: dictionary with all step-level details
+    :return: string with all step-level details
     """
 
-    s = f'\n\t\tMove: {move}'.ljust(15) + \
-        'Leader: {}'.format(move_dict_['leader']).ljust(20) + \
-        'A: {}'.format(move_dict_['action']).ljust(14) + \
-        'Random A: {}'.format(move_dict_['Random action']).ljust(20) + \
-        'Optimal A: {}'.format(move_dict_['Optimal action']).ljust(20) + \
-        'Reward to agent: {}'.format(round(move_dict_['reward_to_agent'], 2)).ljust(24) + \
-        '\n\t\t(ex-post)\tQ_before: {}'.format([round(i, 2) for i in move_dict_['Q_before']]).ljust(47) + \
-        'Q_after: {}'.format([round(i, 2) for i in move_dict_['Q_after']]).ljust(40) + \
-        'Domain: {}'.format(move_dict_['Domain']).ljust(24) + \
-        'State: {}'.format(move_dict_['state']).ljust(26) + \
-        'Next_state: {}'.format(move_dict_['next_state']).ljust(22) + \
-        'Door status: {}'.format(move_dict_['Door status']).ljust(50) + \
-        '\n\t\t\t\t\tNeutral states: {}'.format(move_dict_['neutral_states_counter']).ljust(25) + \
-        'Exploration states: {}'.format(move_dict_['exploration_states_counter']).ljust(25) + \
-        'Exploitation states: {}'.format(move_dict_['exploitation_states_counter'])
+    s = f'\n\t\tStep: {step}'.ljust(15) + \
+        'Leader: {}'.format(step_dict_['leader']).ljust(20) + \
+        'A: {}'.format(step_dict_['action']).ljust(14) + \
+        'Random A: {}'.format(step_dict_['Random action']).ljust(20) + \
+        'Optimal A: {}'.format(step_dict_['Optimal action']).ljust(20) + \
+        'Reward to agent: {}'.format(round(step_dict_['reward_to_agent'], 2)).ljust(24) + \
+        '\n\t\t(ex-post)\tQ_before: {}'.format([round(i, 2) for i in step_dict_['Q_before']]).ljust(47) + \
+        'Q_after: {}'.format([round(i, 2) for i in step_dict_['Q_after']]).ljust(40) + \
+        'Domain: {}'.format(step_dict_['Domain']).ljust(24) + \
+        'State: {}'.format(step_dict_['state']).ljust(26) + \
+        'Next_state: {}'.format(step_dict_['next_state']).ljust(22) + \
+        'Door status: {}'.format(step_dict_['Door status']).ljust(50) + \
+        '\n\t\t\t\t\tNeutral states: {}'.format(step_dict_['neutral_states_counter']).ljust(25) + \
+        'Short path states: {}'.format(step_dict_['shortpath_states_counter']).ljust(25) + \
+        'Long path states: {}'.format(step_dict_['longpath_states_counter'])
 
     return s
 
@@ -437,52 +438,30 @@ def run_details(run, start_time, dyna_params, org_diagnostics):
     run_duration = dt.timedelta(seconds=time.time() - start_time)
     s += f'Duration: {run_duration} | ~ {run_duration * (dyna_params.RUNS - run - 1)} to go\n'
 
-    n_orgSteps_for_average = 500
-    s += '\n\tAvg. moves per org step across last {} org steps: \t{}'.format(
-            n_orgSteps_for_average, round(float(np.mean(org_diagnostics['n_moves'][:n_orgSteps_for_average])), 2))
-    s += '\n\tAvg. rewards per org step across last {} org steps: \t{}'.format(
-            n_orgSteps_for_average, round(float(np.mean(org_diagnostics['net_reward_to_org'][:n_orgSteps_for_average])), 2))
+    s += '\n\tAvg. steps per org step: \t{}'.format(round(float(np.mean(org_diagnostics['n_steps'][:dyna_params.EPISODES])), 2))
+    s += '\n\tAvg. net rewards per org step: \t{}'.format(round(float(np.mean(org_diagnostics['net_reward_to_org'][:dyna_params.EPISODES])), 2))
 
-    s += '\n\tPath to goal via:'
-    s += '\n\t\tShort path (open door): {} (avg over last {} org steps in run)'.format(
-            round(sum(org_diagnostics['exploration_path'][:n_orgSteps_for_average]) / n_orgSteps_for_average * 100, 2),
-            n_orgSteps_for_average)
-    s += '\n\t\tLong path: {} (avg over last {} org steps in run)'.format(
-            round(sum(org_diagnostics['exploitation_path'][:n_orgSteps_for_average]) / n_orgSteps_for_average * 100, 2),
-            n_orgSteps_for_average)
-    s += '\n\t\tShort path (closed door): {} (avg over last {} org steps in run)'.format(
-            round(sum(org_diagnostics['closed_door_path'][:n_orgSteps_for_average]) / n_orgSteps_for_average * 100, 2),
-            n_orgSteps_for_average)
+    s += '\n\tPath taken:'
+    s += '\n\t\tShort path (open door): {}%'.format(round(sum(org_diagnostics['short_open_door_path'][:dyna_params.EPISODES]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tLong path: {}%'.format(round(sum(org_diagnostics['long_path'][:dyna_params.EPISODES]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tShort path (closed door): {}%'.format(round(sum(org_diagnostics['short_closed_door_path'][:dyna_params.EPISODES]) / dyna_params.EPISODES * 100, 2))
 
     s += '\n\tPolicy suggested:'
-    s += '\n\t\tExploration path: {}%'.format(round(
-            sum([1 for i in org_diagnostics['optimalPathLength'][-n_orgSteps_for_average:] if
-                 i == 7]) / n_orgSteps_for_average * 100, 2))
-    s += '\n\t\tExploitation path: {}%'.format(round(
-            sum([1 for i in org_diagnostics['optimalPathLength'][-n_orgSteps_for_average:] if
-                 i == 11]) / n_orgSteps_for_average * 100, 2))
+    s += '\n\t\tShort path: {}%'.format(round(sum([1 for i in org_diagnostics['optimalPathLength'][-dyna_params.EPISODES:] if i == 7]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tLong path: {}%'.format(round(sum([1 for i in org_diagnostics['optimalPathLength'][-dyna_params.EPISODES:] if i == 11]) / dyna_params.EPISODES * 100, 2))
 
-    s += '\n\tLeaders across {} last org steps:'.format(n_orgSteps_for_average)
-    s += '\n\t\t{}% Agent 1'.format(
-            round(sum([1 for i in org_diagnostics['leaders'][:n_orgSteps_for_average] if 'AGENT_1' in i]) / n_orgSteps_for_average * 100, 2))
-    s += '\n\t\t{}% Agent 2'.format(
-            round(sum([1 for i in org_diagnostics['leaders'][:n_orgSteps_for_average] if 'AGENT_2' in i]) / n_orgSteps_for_average * 100, 2))
-    s += '\n\t\t{}% Agent 3'.format(
-            round(sum([1 for i in org_diagnostics['leaders'][:n_orgSteps_for_average] if 'AGENT_3' in i]) / n_orgSteps_for_average * 100, 2))
-    s += '\n\t\t{}% Agent 4'.format(
-            round(sum([1 for i in org_diagnostics['leaders'][:n_orgSteps_for_average] if 'AGENT_4' in i]) / n_orgSteps_for_average * 100, 2))
-    s += '\n\t\t{}% Automation'.format(
-            round(sum([1 for i in org_diagnostics['leaders'][:n_orgSteps_for_average] if 'AUTOMATION' in i]) / n_orgSteps_for_average * 100, 2))
+    s += '\n\tAgent shares:'
+    s += '\n\t\tAgent 1: {}%'.format(round(sum([1 for i in org_diagnostics['leaders'][:dyna_params.EPISODES] if 'AGENT_1' in i]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tAgent 2: {}%'.format(round(sum([1 for i in org_diagnostics['leaders'][:dyna_params.EPISODES] if 'AGENT_2' in i]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tAgent 3: {}%'.format(round(sum([1 for i in org_diagnostics['leaders'][:dyna_params.EPISODES] if 'AGENT_3' in i]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tAgent 4: {}%'.format(round(sum([1 for i in org_diagnostics['leaders'][:dyna_params.EPISODES] if 'AGENT_4' in i]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tAutomation: {}%'.format(round(sum([1 for i in org_diagnostics['leaders'][:dyna_params.EPISODES] if 'AUTOMATION' in i]) / dyna_params.EPISODES * 100, 2))
 
     s += '\n\tAction from start:'
-    s += '\n\t\t{}% UP'.format(
-            round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 0]) / dyna_params.EPISODES * 100, 2))
-    s += '\n\t\t{}% DOWN'.format(
-            round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 1]) / dyna_params.EPISODES * 100, 2))
-    s += '\n\t\t{}% LEFT'.format(
-            round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 2]) / dyna_params.EPISODES * 100, 2))
-    s += '\n\t\t{}% RIGHT'.format(
-            round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 3]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tUP: {}%'.format(round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 0]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tDOWN: {}%'.format(round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 1]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tLEFT: {}%'.format(round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 2]) / dyna_params.EPISODES * 100, 2))
+    s += '\n\t\tRIGHT: {}%'.format(round(sum([1 for i in org_diagnostics['actionFromStart'] if i == 3]) / dyna_params.EPISODES * 100, 2))
 
     s += '\n\n\t'
     s += '–' * DIVIDER_WIDTH
