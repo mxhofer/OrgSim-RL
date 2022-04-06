@@ -12,11 +12,11 @@ The OrgSim-RL platform is a reinforcement learning simulation tool to model orga
 
 # Key directories and files
 
-- `dyna-q/`: dyna-Q algorithm 
-- `vm/`: virtual machine scripts
-- `.streamlit/`: Streamlit authentication
-- `config.yaml`: all parameter configurations
-- `dashboard.py`: Streamlit dashboard
+- [dyna-q/](dyna-q): dyna-Q algorithm 
+- [vm/](vm): virtual machine scripts
+- [.streamlit/](.streamlit): Streamlit authentication
+- [config.yaml](config.yaml): all parameter configurations
+- [dashboard.py](dashboard.py): Streamlit dashboard
 
 # Usage
 ## Fork repo
@@ -42,11 +42,11 @@ You will need to enable the following services:
 
 1. Create a VM with a disk (e.g. 200GB)
 2. Add to the disk: 
-   1. `vm/rpc.sh` script
+   1. [vm/rpc.sh](vm/rpc.sh) script
    2. When you stop this first VM, keep the disk around so you can re-use copies of the disk for future VMs
 3. Stop the VM
 4. Create a new image from the disk. Future VMs will use a copy of this image.
-5. Update VM configurations in `vm/vm.py`:
+5. Update VM configurations in [vm/vm.py](vm/vm.py):
    1. GitHub URL
       1. Format: `https://<username>:<token>@<github_url>`
    2. Project name
@@ -55,11 +55,11 @@ You will need to enable the following services:
 
 ## Run simulation on local machine (not recommended)
 
-The `config.yaml` file contains all parameter values. The parameter values for specializaiton (lambda), automation (tau), environmental change (delta) are passed through the command line.
+The [config.yaml](config.yaml) file contains all parameter values. The parameter values for specializaiton (lambda), automation (tau), environmental change (delta) are passed through the command line.
 
 Beware: the simulation with default parameters takes > 12 hours to complete on an M1 MacBook Pro. 
 
-1. In your terminal, navigate to the `/dyna-q` directory.
+1. In your terminal, navigate to the [dyna-q/](dyna-q) directory.
 2. Run the simulation:
 
    `python dynaQ.py lambda <par_val> tau <par_val> delta <par_val>`
@@ -67,20 +67,20 @@ Beware: the simulation with default parameters takes > 12 hours to complete on a
 
 ## Run simulation on GCE (recommended)
 
-The `vm/vm.py` file starts VMs and overwrites parameter values for specializaiton (lambda), automation (tau), environmental change (delta).
+The [vm/vm.py](vm/vm.py) file starts VMs and overwrites parameter values for specializaiton (lambda), automation (tau), environmental change (delta).
 
-1. Set parameters in `config.yaml` 
-2. Set a value for the `TAG` variable at the top of `dyna-q/dynaQ.py` to identify the simulation run.
+1. Set parameters in [config.yaml](config.yaml) 
+2. Set a value for the `TAG` variable at the top of [dyna-q/dynaQ.py](dyna-q/dynaQ.py) to identify the simulation run.
 3. Push repository to GitHub 
-4. Set parameter ranges in `vm/vm.py`
-5. Run `vm/vm.py`
+4. Set parameter ranges in [vm/vm.py](vm/vm.py)
+5. Run [vm/vm.py](vm/vm.py)
 6. Go to Google Cloud / Compute Engine / VM instances
    1. Click on a VM
    2. Open `Serial Port 1 (console)` to check stdout log
 7. Check Google Cloud / Cloud Storage / Browser for simulation ouputs:
    1. Check bucket `simulation-output/results/`
 8. Validate outputs
-   1. Use the `validate_outputs` function in `vm/vm.py`
+   1. Use the `validate_outputs` function in [vm/vm.py](vm/vm.py)
 
 ## Ingest results into BigQuery
 
@@ -104,15 +104,15 @@ The `vm/vm.py` file starts VMs and overwrites parameter values for specializaito
    1. Create a service account with Viewer permissions. See details [here](https://docs.streamlit.io/knowledge-base/tutorials/databases/bigquery).
    2. Create a key. 
    3. Download the key as a JSON. 
-2. Save the key file in `.streamlit/`
-3. Update the path to the key file in `dashboard.py`
-4. Add the key file to `.gitignore`
+2. Save the key file in [.streamlit/](.streamlit)
+3. Update the path to the key file in [dashboard.py](dashboard.py)
+4. Add the key file to [.gitignore](.gitignore)
 
 ## Deploy dashboard
 
 1. Test that the dashboard is running locally:
    1. `streamlit run dashboard.py --server.port=8080 --server.address=0.0.0.0`
-   2. Running the dashboard will write .csv files of the outputs to disk in `dyna-q/outputs`
+   2. Running the dashboard will write .csv files of the outputs to disk in [dyna-q/outputs](dyna-q/outputs)
 2. Test that the dashboard is running locally in a Docker container:
    1. `docker build . -t dashboard`
    2. `docker run -p 8080:8080 dashboard`
