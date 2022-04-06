@@ -120,3 +120,7 @@ The `vm/vm.py` file starts VMs and overwrites parameter values for specializaito
    1. `gcloud app deploy dashboard.yaml`
    2. Click on the URL of the deployed service
 
+Your deployed Streamlit dashboard is ready to use!
+
+![Streamlit dashboard](/.streamlit/dashboard.png) 
+

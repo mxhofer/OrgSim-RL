@@ -3,6 +3,7 @@
 .idea
 .streamlit
 !.streamlit/readme.md
+!.streamlit/dashboard.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
