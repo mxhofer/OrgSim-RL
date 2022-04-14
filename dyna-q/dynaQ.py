@@ -359,7 +359,7 @@ class Organization:
         # Instantiate Q-tables
         self.q_tables = []
         for q_table_i in range(dyna_params.LAMBDA_):
-            self.q_tables.append(np.full(maze_params.Q_SIZE, 0, dtype=np.float))
+            self.q_tables.append(np.full(maze_params.Q_SIZE, 0, dtype=float))
 
         self.q_table_index = None
         self.leader_name = None
@@ -416,7 +416,7 @@ class Organization:
             raise ValueError(f'ERROR: incorrect number of agents (lambda) of: {dyna_params_.LAMBDA_}')
 
         # Temporary Q-table of zeros and action values from start state
-        Q_start = np.zeros(maze_params_.Q_SIZE, dtype=np.float)
+        Q_start = np.zeros(maze_params_.Q_SIZE, dtype=float)
         Q_start[maze_params_.START_STATE[0], maze_params_.START_STATE[1], :] = deepcopy(action_values_start)
 
         # Maximum Q-value at start
